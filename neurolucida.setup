@@ -1,0 +1,13 @@
+;;;; -*- Hen -*-
+
+(compile -S -O3 -d0 -b neurolucida.scm)
+
+(install-program 
+ 'neurolucida 
+ 
+ `("neurolucida" )
+
+  ; Assoc list with properties for the program:
+  '((version 1.15))
+  )
+

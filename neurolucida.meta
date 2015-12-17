@@ -1,0 +1,24 @@
+;;;; -*- Hen -*-
+
+((egg "neurolucida.egg") ; This should never change
+
+ ; List here all the files that should be bundled as part of your egg.  
+
+ (files "neurolucida.meta" "neurolucida.scm" "neurolucida.setup")
+ 
+ ; Your egg's license:
+
+ (license "GPL-3")
+
+ ; Pick one from the list of categories (see below) for your egg and
+ ; enter it here.
+
+ (category tools)
+
+ ; A list of eggs neurolucida depends on.
+
+ (needs typeclass sxml-transforms sxpath ssax getopt-long (digraph 1.16) iset format-graph kd-tree)
+
+ (author "Ivan Raikov")
+
+ (synopsis "Output Neurolucida XML files in various formats."))
