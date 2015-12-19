@@ -524,13 +524,26 @@
 (define (print-swc x)
   (define get (compose car alist-ref))
 
+  (define (swctype typestr)
+    (if (not (string? typestr))
+        (error "invalid tree type" typestr)
+        (cond ((string-ci=? typestr "Dendrite") 3)
+              ((string-ci=? typestr "Basal") 3)
+              ((string-ci=? typestr "Apical") 4)
+              ((string-ci=? typestr "Axon") 2)
+              ((string-ci=? typestr "Soma") 1)
+              (else 3))
+        ))
+  
   (let ((sxml `(*TOP* ,@(cdr x))))
 
-    (let* ((offset (make-parameter 0))
+    (let* (
+           (offset (make-parameter 0))
            (soma ((sxpath `(nl:contour))  sxml))
 	   (soma-points ((sxpath `(nl:point @))  soma))
 	   (soma-npoints (length soma-points))
-	   (soma-indices (list-tabulate soma-npoints (lambda (x) (+ 1 x)))))
+	   (soma-indices (list-tabulate soma-npoints (lambda (x) (+ 1 x))))
+           )
 
        (for-each (lambda (p n)
 		  (let ((data (cdr p)))
@@ -546,43 +559,52 @@
        
        (offset soma-npoints)
 
-       (let recur ((tree ((sxpath `(nl:tree))  sxml))  
-		   (parent-index soma-npoints))
+       (let ((treetype (let ((typeattr ((sxpath `(nl:tree @ type)) sxml)))
+                         (if (pair? typeattr)
+                             (swctype (sxml:text (car typeattr)))
+                             3))))
 
-	 (let ((points     ((sxpath `(nl:point @))  tree))
-	       (subtrees   (append ((sxpath `(nl:tree))  tree)
-				   ((sxpath `(nl:branch))  tree))))
-	   
-	   (let* ((npoints (length points))
-		  (indices (let ((k (+ 1 (offset)))) (list-tabulate npoints (lambda (x) (+ k x)))))
-		  (parents (cons parent-index indices)))
-	     
-	     (fold (lambda (pt i par n)
-			 (let ((data (cdr pt)))
-			   (let ((T    (if (fx> n 0) 3 (if (null? subtrees) 6 5))) ;; dendrite, or end point/bifurcation point
-				 (x  (get 'x data))
-				 (y  (get 'y data))
-				 (z  (get 'z data))
-				 (R  (number->string (/ (string->number (get 'd data)) 2)))
-				 (P  par)
-				 )
-			     (printf "~A ~A ~A ~A ~A ~A ~A~%" 
-                                     i T x y z R P)
-			     (fx- n 1)
-			     )))
-		   (fx- npoints 1)
-		   points indices parents)
-	     
-	     (let ((parent-index1 (+ npoints (offset))))
+         (let recur ((tree ((sxpath `(nl:tree))  sxml))
+                     (parent-index soma-npoints))
+           
+           (let (
+                 (points     ((sxpath `(nl:point @))  tree))
+                 (subtrees   (append ((sxpath `(nl:tree))  tree)
+                                     ((sxpath `(nl:branch))  tree))))
+             
+             (let* ((npoints (length points))
+                    (indices (let ((k (+ 1 (offset)))) (list-tabulate npoints (lambda (x) (+ k x)))))
+                    (parents (cons parent-index indices)))
+               
+               (fold (lambda (pt i par n)
+                       (let ((data (cdr pt)))
+                         (let ((T    (if (fx> n 0) treetype (if (null? subtrees) 6 5))) ;; dendrite/axon, or end point/bifurcation point
+                               (x  (get 'x data))
+                               (y  (get 'y data))
+                               (z  (get 'z data))
+                               (R  (number->string (/ (string->number (get 'd data)) 2)))
+                               (P  par)
+                               )
+                           (printf "~A ~A ~A ~A ~A ~A ~A~%" 
+                                   i T x y z R P)
+                           (fx- n 1)
+                           )))
+                     (fx- npoints 1)
+                     points indices parents)
+               
+               (let ((parent-index1 (+ npoints (offset))))
+                 
+                 (offset (+ (offset) npoints)) 
+                 
+                 (if (pair? subtrees)
+                     (for-each (lambda (subtree) 
+                                 (recur subtree parent-index1) )
+                               subtrees)))
+               ))
+           ))
 
-	       (offset (+ (offset) npoints)) 
-
-	       (if (pair? subtrees)
-		   (for-each (lambda (subtree) (recur subtree parent-index1) )
-			     subtrees)))
-	     )))
-
-    )))
+       ))
+  )
 
 
 (define (print-pts x)
@@ -606,7 +628,7 @@
 
        (let recur ((tree ((sxpath `(nl:tree))  sxml))  )
 
-	 (let ((points     ((sxpath `(nl:point @))  tree))
+ 	 (let ((points     ((sxpath `(nl:point @))  tree))
 	       (subtrees   (append ((sxpath `(nl:tree))  tree)
 				   ((sxpath `(nl:branch))  tree))))
 	   

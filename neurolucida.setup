@@ -8,6 +8,6 @@
  `("neurolucida" )
 
   ; Assoc list with properties for the program:
-  '((version 1.15))
+  '((version 1.16))
   )
 
